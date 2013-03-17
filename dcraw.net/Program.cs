@@ -115,6 +115,7 @@ namespace dcraw.net.rw2
 
 
         //----------------------------- 傳說中的 Lanczos3 縮圖演算法 ,待速度優化 start
+        // 參考 http://blog.csdn.net/yangzl2008/article/details/6693678 原Java Code
         static int nDots;
         static int nHalfDots;
         static double PI = (double)3.14159265358978;
