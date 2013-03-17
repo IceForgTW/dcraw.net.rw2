@@ -76,13 +76,13 @@ namespace dcraw.net.rw2
             ifp.Seek(data_offset, SeekOrigin.Begin);
             //開始解析和載入raw內容
             panasonic_load_raw();
- 
+
             ifp.Close();
 
 
             //將載入的raw影像資料匯出成CSV標準格式,方便其他軟體讀取處理
-           // RawImageExport_CSV();
-            
+            // RawImageExport_CSV();
+
 
             //要得到最基本的能夠觀看的影像還要將RAW影像每個位置的pixel利用鄰近pixel的r或g或b來內插填補成完整的RGB piexl.稱demosaicing.
             //如果要求得更精緻影像則還需要處理亮度增益.白平衡.去躁.gamma調整.動態範圍壓縮調整.變形校正.彩度.對比.色調調整等等後續步驟
@@ -94,7 +94,7 @@ namespace dcraw.net.rw2
             raw_demosaicing();
 
             ImageToBitMap();
-            
+
             //ImageWhitebalanceAuto_grayworld();
             //HistogramEqualization();
 
@@ -111,47 +111,48 @@ namespace dcraw.net.rw2
 
         #region 後續處理
 
-                   
+
+
+
+        //----------------------------- 傳說中的 Lanczos3 縮圖演算法 ,待速度優化 start
         static int nDots;
         static int nHalfDots;
         static double PI = (double)3.14159265358978;
-        static double support = (double) 3.0;
+        static double support = (double)3.0;
         static double[] contrib;
         static double[] normContrib;
         static double[] tmpContrib;
         static int scaleWidth;
 
-        static Bitmap ResizeLanczos(int rwidth , int rheight)
+        static Bitmap ResizeLanczos(int rwidth, int rheight)
         {
             int w = rwidth, h = rheight;
 
-            double sx =  w /(double) width ;
-            double sy = h /(double) height;
+            double sx = w / (double)width;
+            double sy = h / (double)height;
 
             if (sx > sy)
             {
                 sx = sy;
-                w = (int)(sx * width );
+                w = (int)(sx * width);
             }
             else
             {
                 sy = sx;
-                h = (int)(sy * height );
+                h = (int)(sy * height);
             }
 
             scaleWidth = w;
-            
+
             if (determineResultSize(w, h) == 1)
             {
                 return rgbImage;
             }
 
-
             calContrib();
-            Bitmap pbOut = HorizontalFiltering(rgbImage , w);
+            Bitmap pbOut = HorizontalFiltering(rgbImage, w);
             Bitmap pbFinalOut = VerticalFiltering(pbOut, h);
             return pbFinalOut;
-            //return pbOut;
         }
 
 
@@ -211,7 +212,7 @@ namespace dcraw.net.rw2
             int i = 0;
             for (i = start; i <= stop; i++)
                 weight += contrib[i];
-            
+
             for (i = start; i <= stop; i++)
                 tmpContrib[i] = contrib[i] / weight;
         }
@@ -224,8 +225,8 @@ namespace dcraw.net.rw2
             if (scaleH >= 1.0 && scaleV >= 1.0)
                 return 1;
             return 0;
-        } 
-       
+        }
+
 
 
         static Bitmap VerticalFiltering(Bitmap pbImage, int iOutH)
@@ -233,104 +234,104 @@ namespace dcraw.net.rw2
             int iW = pbImage.Width;
             int iH = pbImage.Height;
             Color value;
-            Bitmap pbOut = new Bitmap(iW, iOutH, PixelFormat.Format24bppRgb );
+            Bitmap pbOut = new Bitmap(iW, iOutH, PixelFormat.Format24bppRgb);
 
-            FastBitmap processor = new FastBitmap(pbImage );
+            FastBitmap processor = new FastBitmap(pbImage);
             processor.LockImage();
 
             FastBitmap processor_out = new FastBitmap(pbOut);
             processor_out.LockImage();
 
 
-    //        Parallel.For(0, (iOutH) - 1, y =>
-//{
+            //        Parallel.For(0, (iOutH) - 1, y =>
+            //{
 
-    for (int y = 0; y < iOutH; y++)
+            for (int y = 0; y < iOutH; y++)
+            {
+
+                int startY;
+                int start;
+                int Y = (int)(((double)y) * ((double)iH) / ((double)iOutH) + 0.5);
+
+                startY = Y - nHalfDots;
+                if (startY < 0)
                 {
+                    startY = 0;
+                    start = nHalfDots - Y;
+                }
+                else
+                {
+                    start = 0;
+                }
 
-    int startY;
-    int start;
-    int Y = (int)(((double)y) * ((double)iH) / ((double)iOutH) + 0.5);
+                int stop;
+                int stopY = Y + nHalfDots;
+                if (stopY > (int)(iH - 1))
+                {
+                    stopY = iH - 1;
+                    stop = nHalfDots + (iH - 1 - Y);
+                }
+                else
+                {
+                    stop = nHalfDots * 2;
+                }
 
-    startY = Y - nHalfDots;
-    if (startY < 0)
-    {
-        startY = 0;
-        start = nHalfDots - Y;
-    }
-    else
-    {
-        start = 0;
-    }
+                if (start > 0 || stop < nDots - 1)
+                {
+                    CalTempContrib(start, stop);
+                    for (int x = 0; x < iW; x++)
+                    {
 
-    int stop;
-    int stopY = Y + nHalfDots;
-    if (stopY > (int)(iH - 1))
-    {
-        stopY = iH - 1;
-        stop = nHalfDots + (iH - 1 - Y);
-    }
-    else
-    {
-        stop = nHalfDots * 2;
-    }
+                        double valueRed = 0.0;
+                        double valueGreen = 0.0;
+                        double valueBlue = 0.0;
 
-    if (start > 0 || stop < nDots - 1)
-    {
-        CalTempContrib(start, stop);
-        for (int x = 0; x < iW; x++)
-        {
+                        for (int i = startY, j = start; i <= stopY; i++, j++)
+                        {
+                            valueRed += processor.GetPixel(x, i).R * tmpContrib[j]; // pContrib[j];
+                            valueGreen += processor.GetPixel(x, i).G * tmpContrib[j];// pContrib[j];
+                            valueBlue += processor.GetPixel(x, i).B * tmpContrib[j]; //pContrib[j];
+                        }
 
-            double valueRed = 0.0;
-            double valueGreen = 0.0;
-            double valueBlue = 0.0;
+                        if ((int)valueRed > 255) valueRed = 255;
+                        if ((int)valueGreen > 255) valueGreen = 255;
+                        if ((int)valueBlue > 255) valueBlue = 255;
 
-            for (int i = startY, j = start; i <= stopY; i++, j++)
-            {
-                valueRed += processor.GetPixel(x, i).R * tmpContrib[j]; // pContrib[j];
-                valueGreen += processor.GetPixel(x, i).G * tmpContrib[j];// pContrib[j];
-                valueBlue += processor.GetPixel(x, i).B * tmpContrib[j]; //pContrib[j];
+                        if (valueRed < 0) valueRed = 0;
+                        if (valueGreen < 0) valueGreen = 0;
+                        if (valueBlue < 0) valueBlue = 0;
+                        value = Color.FromArgb((int)valueRed, (int)valueGreen, (int)valueBlue);
+                        processor_out.SetPixel(x, y, value);
+                    }
+                }
+                else
+                {
+                    for (int x = 0; x < iW; x++)
+                    {
+                        double valueRed = 0.0;
+                        double valueGreen = 0.0;
+                        double valueBlue = 0.0;
+
+                        for (int i = startY, j = start; i <= stopY; i++, j++)
+                        {
+                            valueRed += processor.GetPixel(x, i).R * tmpContrib[j]; // pContrib[j];
+                            valueGreen += processor.GetPixel(x, i).G * tmpContrib[j];// pContrib[j];
+                            valueBlue += processor.GetPixel(x, i).B * tmpContrib[j]; //pContrib[j];
+                        }
+
+                        if ((int)valueRed > 255) valueRed = 255;
+                        if ((int)valueGreen > 255) valueGreen = 255;
+                        if ((int)valueBlue > 255) valueBlue = 255;
+
+                        if (valueRed < 0) valueRed = 0;
+                        if (valueGreen < 0) valueGreen = 0;
+                        if (valueBlue < 0) valueBlue = 0;
+                        value = Color.FromArgb((int)valueRed, (int)valueGreen, (int)valueBlue);
+                        processor_out.SetPixel(x, y, value);
+                    }
+                }
+
             }
-
-            if ((int)valueRed > 255) valueRed = 255;
-            if ((int)valueGreen > 255) valueGreen = 255;
-            if ((int)valueBlue > 255) valueBlue = 255;
-
-            if (valueRed < 0) valueRed = 0;
-            if (valueGreen < 0) valueGreen = 0;
-            if (valueBlue < 0) valueBlue = 0;
-            value = Color.FromArgb((int)valueRed, (int)valueGreen, (int)valueBlue);
-            processor_out.SetPixel(x, y, value);
-        }
-    }
-    else
-    {
-        for (int x = 0; x < iW; x++)
-        {
-            double valueRed = 0.0;
-            double valueGreen = 0.0;
-            double valueBlue = 0.0;
-
-            for (int i = startY, j = start; i <= stopY; i++, j++)
-            {
-                valueRed += processor.GetPixel(x, i).R * tmpContrib[j]; // pContrib[j];
-                valueGreen += processor.GetPixel(x, i).G * tmpContrib[j];// pContrib[j];
-                valueBlue += processor.GetPixel(x, i).B * tmpContrib[j]; //pContrib[j];
-            }
-
-            if ((int)valueRed > 255) valueRed = 255;
-            if ((int)valueGreen > 255) valueGreen = 255;
-            if ((int)valueBlue > 255) valueBlue = 255;
-
-            if (valueRed < 0) valueRed = 0;
-            if (valueGreen < 0) valueGreen = 0;
-            if (valueBlue < 0) valueBlue = 0;
-            value = Color.FromArgb((int)valueRed, (int)valueGreen, (int)valueBlue);
-            processor_out.SetPixel(x, y, value);
-        }
-    }
-
-        }
 
 
 
@@ -347,7 +348,7 @@ namespace dcraw.net.rw2
             int dwInW = bufImage.Width;
             int dwInH = bufImage.Height;
             Color value;
-            Bitmap pbOut = new Bitmap(iOutW, dwInH,PixelFormat.Format24bppRgb);
+            Bitmap pbOut = new Bitmap(iOutW, dwInH, PixelFormat.Format24bppRgb);
 
 
             FastBitmap processor = new FastBitmap(bufImage);
@@ -458,12 +459,13 @@ namespace dcraw.net.rw2
             processor_out.UnlockImage();
             return pbOut;
 
-        } 
+        }
+
+        //----------------------------- 傳說中的 Lanczos3 縮圖演算法 ,待速度優化 end
 
 
-        
         ////////////////////////////////////////////////
-        
+
 
 
         static Bitmap rgbImage = null;
@@ -488,22 +490,22 @@ namespace dcraw.net.rw2
              */
             Parallel.For(2, (width + 2) - 1, i =>
             {
-               Parallel.For(height_m, (raw_height - height_m) - 1, j =>
-                {
-                    try
-                    {
-                        //多數可換鏡頭的機種拍攝出來的rw2檔為12bits,所以要剪裁掉4個bits >>4
-                        //不過如果是dc拍出來的多為10bits,只需要剪裁掉2個bits ,程式需要改成 >> 2
-                        //這地方rw2檔有定義紀錄,但是讀取哪個值要確認一下
-                        processor.SetPixel(i - 2, j - height_m, Color.FromArgb(demosaicing_image[i - 2, j - height_m].r >> 4, demosaicing_image[i - 2, j - height_m].g >> 4, demosaicing_image[i - 2, j - height_m].b >> 4));
-                    }
-                    catch (Exception e)
-                    {
-                        //我解的rw2檔sample會發生green色在 >>4 後 ,還是有少數幾個pixl會超過正常最大範圍255的狀況
-                        //問題還要check
-                        Console.WriteLine(e.Message);
-                    }
-                });
+                Parallel.For(height_m, (raw_height - height_m) - 1, j =>
+                 {
+                     try
+                     {
+                         //多數可換鏡頭的機種拍攝出來的rw2檔為12bits,所以要剪裁掉4個bits >>4
+                         //不過如果是dc拍出來的多為10bits,只需要剪裁掉2個bits ,程式需要改成 >> 2
+                         //這地方rw2檔有定義紀錄,但是讀取哪個值要確認一下
+                         processor.SetPixel(i - 2, j - height_m, Color.FromArgb(demosaicing_image[i - 2, j - height_m].r >> 4, demosaicing_image[i - 2, j - height_m].g >> 4, demosaicing_image[i - 2, j - height_m].b >> 4));
+                     }
+                     catch (Exception e)
+                     {
+                         //我解的rw2檔sample會發生green色在 >>4 後 ,還是有少數幾個pixl會超過正常最大範圍255的狀況
+                         //問題還要check
+                         Console.WriteLine(e.Message);
+                     }
+                 });
             });
 
             processor.UnlockImage();
@@ -534,7 +536,7 @@ namespace dcraw.net.rw2
             int sum = 0;
             int[] sum_of_hist = new int[256];
             int area = height * width;
-            double constant = 255.0 /(double) area;
+            double constant = 255.0 / (double)area;
 
             FastBitmap processor = new FastBitmap(rgbImage);
             processor.LockImage();
@@ -555,19 +557,19 @@ namespace dcraw.net.rw2
                 sum_of_hist[i] = sum;
             }
 
-            for (int i = 0; i < width ; i++)
-            
-                for (int j = 0; j < height ; j++)
+            for (int i = 0; i < width; i++)
+
+                for (int j = 0; j < height; j++)
                 {
                     int r = processor.GetPixel(i, j).R;
                     int g = processor.GetPixel(i, j).G;
                     int b = processor.GetPixel(i, j).B;
-                    processor.SetPixel(i, j, Color.FromArgb( (int)(constant * sum_of_hist[r]) ,(int)( constant * sum_of_hist[g]), (int)( constant * sum_of_hist[b])));
+                    processor.SetPixel(i, j, Color.FromArgb((int)(constant * sum_of_hist[r]), (int)(constant * sum_of_hist[g]), (int)(constant * sum_of_hist[b])));
                 }
 
             processor.UnlockImage();
             Console.WriteLine("Histogram Equalization處理結束.");
-            
+
 
         }
 
