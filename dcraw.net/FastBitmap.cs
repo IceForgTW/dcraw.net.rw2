@@ -10,7 +10,7 @@ namespace BitmapProcessing
 {
     unsafe public class FastBitmap
     {
-        private struct PixelData
+        public struct PixelData
         {
             public byte blue;
             public byte green;
@@ -24,9 +24,9 @@ namespace BitmapProcessing
         }
 
         private Bitmap workingBitmap = null;
-        private int width = 0;
+        public  int width = 0;
         private BitmapData bitmapData = null;
-        private Byte* pBase = null;
+        public Byte* pBase = null;
 
         public FastBitmap(Bitmap inputBitmap)
         {
@@ -45,7 +45,7 @@ namespace BitmapProcessing
             pBase = (Byte*)bitmapData.Scan0.ToPointer();
         }
 
-        private PixelData* pixelData = null;
+        public PixelData* pixelData = null;
 
         public Color GetPixel(int x, int y)
         {
