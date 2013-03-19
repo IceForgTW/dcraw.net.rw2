@@ -69,7 +69,7 @@ namespace dcraw.net.rw2
                 return;
             }
 
-            
+
 
             Console.WriteLine("\nRW2檔Paser\n\n[檔案資訊]");
             identify();
@@ -98,7 +98,7 @@ namespace dcraw.net.rw2
             ifp.Close();
 
             if (args.Contains("-csv"))
-                RawImageExport_CSV();   
+                RawImageExport_CSV();
             //將載入的raw影像資料匯出成CSV標準格式,方便其他軟體讀取處理
             //如果你想靠其他軟體嘗試處理raw檔資料的話
 
@@ -131,7 +131,7 @@ namespace dcraw.net.rw2
                 rheight = height;
             }
 
-            
+
             Bitmap reszie_img = ResizeLanczos(rwidth, rheight);
             // ResizeLanczos的程式碼佔掉很多行,不過其實不是解raw檔一定需要的東西
             // Lanczos號稱地表最強縮圖演算法,有沒有那麼好不知道,不過多數狀況下,它出來的結果的確讓人滿意
@@ -645,10 +645,9 @@ namespace dcraw.net.rw2
             int sum = 0;
             int[] sum_of_hist = new int[256];
             int area = height * width;
-            double constant = 255.0 / (double)area; 
+            double constant = 255.0 / (double)area;
 
-             byte* index;
-           // FastBitmap.PixelData* data;
+            byte* index;
 
             FastBitmap processor = new FastBitmap(rgbImage);
             processor.LockImage();
@@ -656,20 +655,12 @@ namespace dcraw.net.rw2
             for (int i = 0; i < width; i++)
                 for (int j = 0; j < height; j++)
                 {
-                    //int r = processor.GetPixel(i, j).R;
-                    //int g = processor.GetPixel(i, j).G;
-                    //int b = processor.GetPixel(i, j).B;
-
                     index = (processor.pBase + j * processor.width + i * pdsize);
                     int r = (((FastBitmap.PixelData*)(index)))->red;
-                    //processor.GetPixel(i, j).R;
-
-
                     int g = (((FastBitmap.PixelData*)(index)))->green;
-                    //processor.GetPixel(i, j).G;
-                    int b = (((FastBitmap.PixelData*)(index)))->blue; 
-                    
-                    
+                    int b = (((FastBitmap.PixelData*)(index)))->blue;
+
+
                     int avr = (r + g + b) / 3;
                     hist[avr] = hist[avr] + 1;
                 }
@@ -684,26 +675,15 @@ namespace dcraw.net.rw2
 
                 for (int j = 0; j < height; j++)
                 {
-                    
-                    
+
                     index = (processor.pBase + j * processor.width + i * pdsize);
                     int r = (((FastBitmap.PixelData*)(index)))->red;
-                        //processor.GetPixel(i, j).R;
-
-
-                    int g = (((FastBitmap.PixelData*)(index)))->green; 
-                        //processor.GetPixel(i, j).G;
-                    int b = (((FastBitmap.PixelData*)(index)))->blue; 
-                        //processor.GetPixel(i, j).B;
-
+                    int g = (((FastBitmap.PixelData*)(index)))->green;
+                    int b = (((FastBitmap.PixelData*)(index)))->blue;
 
                     (((FastBitmap.PixelData*)(index)))->red = (byte)(constant * sum_of_hist[r]);
                     (((FastBitmap.PixelData*)(index)))->green = (byte)(constant * sum_of_hist[g]);
                     (((FastBitmap.PixelData*)(index)))->blue = (byte)(constant * sum_of_hist[b]);
-
-
-
-                  //  processor.SetPixel(i, j, Color.FromArgb((int)(constant * sum_of_hist[r]), (int)(constant * sum_of_hist[g]), (int)(constant * sum_of_hist[b])));
                 }
 
             processor.UnlockImage();
@@ -744,11 +724,8 @@ namespace dcraw.net.rw2
                     index = (processor.pBase + j * processor.width + i * pdsize);
 
                     R = (((FastBitmap.PixelData*)(index)))->red;
-                        //processor.GetPixel(i, j).R;
                     G = (((FastBitmap.PixelData*)(index)))->green;
-                        //processor.GetPixel(i, j).G;
                     B = (((FastBitmap.PixelData*)(index)))->blue;
-                        //processor.GetPixel(i, j).B;
 
                     Y = 0.299 * R + 0.587 * G + 0.114 * B;
                     Cb = -0.1687 * R - 0.3313 * G + 0.5 * B;
@@ -846,7 +823,7 @@ namespace dcraw.net.rw2
                          * 其實 rw2 內有附帶資訊,告知使用哪種bayer patten,詳細參考dcraw.
                          */
 
-                        
+
 
                         //這裡的邏輯需要重新檢查確一下
                         //不過結果似乎沒啥問題....神奇
@@ -915,9 +892,9 @@ namespace dcraw.net.rw2
                         if (b < 0) b = 0;
 
                         demosaicing_image[j - 2, i - height_m] = new rgb();
-                        demosaicing_image[j - 2, i - height_m].r =(ushort) r;
+                        demosaicing_image[j - 2, i - height_m].r = (ushort)r;
                         demosaicing_image[j - 2, i - height_m].g = (ushort)g;
-                        demosaicing_image[j - 2, i - height_m].b = (ushort) b;
+                        demosaicing_image[j - 2, i - height_m].b = (ushort)b;
 
 
                     }
